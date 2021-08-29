@@ -38,6 +38,7 @@ time_compare() {
 }
 
 doze() {
+  source $config/config.conf
   screen=`dumpsys window policy | grep "mInputRestricted"|cut -d= -f2`
   dumpsys deviceidle | grep -q Enabled=true
   check=$?
@@ -45,18 +46,21 @@ doze() {
     if [[ $check = 1 ]]; then
       dumpsys deviceidle enable deep
       dumpsys deviceidle force-idle deep
+      doze_deviceidle=1
       log "检测到屏幕为息屏状态,进入Doze深度息屏"
     fi
   else
     if [[ $check = 0 ]]; then
       dumpsys deviceidle disable all
       dumpsys deviceidle unforce
+      doze_deviceidle=0
       log "检测到屏幕为亮屏状态,退出Doze深度息屏"
     fi
   fi
 }
 
 whitelist() {
+  source $config/config.conf
   for Clean_up_the_list in $(dumpsys deviceidle whitelist|awk -F ',' '{print $2}')
   do
     dumpsys deviceidle whitelist -$Clean_up_the_list
@@ -70,37 +74,38 @@ whitelist() {
 }
 
 fullpoweroff() {
-  [[ -f $power_Folder ]] && Status=`cat $power_Folder`
-  [[ -f $power_Folder2 ]] && Status2=`cat $power_Folder2`
-  if [[ $(cat $Power) -ge $Power_Stop ]]; then
-    if [[ $Status = 0 || $Status2 = 1 ]]; then
-       if [[ -n $power_a ]]; then
-         power_a=$power_a
-       elif [[ -z $power_a ]]; then
-         log "当前电量为 $(cat $Power)% ,已达到(或大于) $Power_Stop$% ,等待 $Power_Stop_Delay 执行禁止充电命令..."
-         power_c=0
-         sleep $Power_Stop_Delay
-         [[ -f $power_Folder ]] && echo 1 >$power_Folder
-         [[ -f $power_Folder2 ]] && echo 0 >$power_Folder
-         power_a=1
-         power_c=1
-         unset power_b
-         log "已禁止充电,当电池电量为 $Power_Restore% 时,执行恢复充电命令..."
-       fi
-     fi
-   elif [[ $(cat $Power) -le 95 ]]; then
-     if [[ $Status = 1 || $Status2 = 0 ]]; then
-       if [[ -n $power_b ]]; then
-         power_b=$power_b
-       elif [[ -z $power_b ]]; then
-         [[ -f $power_Folder ]] && echo 0 >$power_Folder
-         [[ -f $power_Folder2 ]] && echo 1 >$power_Folder2
-         power_b=1
-         unset power_a
-         log "当前电量为 $(cat $Power)% , 已达到(或小于) $Power_Restore% ,已恢复充电..."
-       fi
-     fi
-   fi
+  source $config/config.conf
+  Power=$(cat $level)%
+  [[ -f $Charging_control ]] && Status=`cat $Charging_control`
+  [[ -f $Charging_control2 ]] && Status2=`cat $Charging_control2`
+  if [[ $(cat $level) -ge $Power_Stop ]]; then
+      if [[ $Status -eq 0 || $Status2 -eq 1 ]]; then
+          if [[ -n $L ]]; then
+            L=$L
+          elif [[ -z $L ]]; then
+            unset Status3
+            [[ -n $Power_Stop_Delay ]] && sleep $Power_Stop_Delay
+            [[ -f $Charging_control ]] && echo 1 >$Charging_control
+            [[ -f $Charging_control2 ]] && echo 0 >$Charging_control2
+            L=1
+            Status3=1
+            unset H
+            log "当前电量为$Power,已停止充电"
+          fi
+      fi
+  elif [[ $(cat $level) -le $Power_Restore ]]; then
+      if [[ $Status -eq 1 || $Status2 -eq 0 ]]; then
+          if [[ -n $H ]]; then
+              H=$H
+          elif [[ -z $H ]]; then
+              [[ -f $Charging_control ]] && echo 0 >$Charging_control
+              [[ -f $Charging_control2 ]] && echo 1 >$Charging_control2
+              H=1
+              unset L
+              log "当前电量为$Power,已重新启用充电"
+          fi
+      fi
+  fi
 }
 
 function topapp(){
@@ -114,6 +119,7 @@ for i in $pose;do
 		test "$(topapp)" = "com.tencent.mm" && break
 		test "$(topapp)" = "com.tencent.mobileqq" && break
 		kill -9 "$PID"
+    log "强制结束 $i"
 	done
 done
 }
@@ -134,13 +140,17 @@ killprocess() {
 [[ -e $config/data/killprocess.conf ]] || touch $config/data/killprocess.conf && echo "0" > $config/data/killprocess.conf
 source $config/config.conf
 check_log
-power_Folder=/sys/class/power_supply/battery/input_suspend
-power_Folder2=/sys/class/power_supply/battery/charging_enabled
-Power=/sys/class/power_supply/battery/capacity
+
+doze_deviceidle=0
+
+Charging_control=/sys/class/power_supply/battery/input_suspend
+Charging_control2=/sys/class/power_supply/battery/charging_enabled
+level=/sys/class/power_supply/battery/capacity
 Status=0
 Status2=1
-power_c=1
-unset power_a power_b
+unset L H
+Status3=1
+
 killprocess_pose="
 com.tencent.mm:sandbox*
 com.tencent.mm:exdevice*
@@ -152,7 +162,7 @@ com.tencent.mobileqq:mini*
 com.tencent.mm:hotpot*
 com.tencent.mobileqq:hotpot*"
 
-log "AshScripts had started."
+log "AshScripts is starting."
 
 until false; do
   time_start=$(date -d "$($date "+%Y-%m-%d") $($date "+%H:%M:%S")" +%s)
@@ -170,17 +180,17 @@ until false; do
 
   local_time=`cat $config/data/whitelist.conf`
   time_compare $local_time
-  if [[ $? = 1 ]]; then
+  if [[ $? = 1 && $doze_deviceidle = 0 ]]; then
     whitelist &
     time1=$(date -d "$($date "+%Y-%m-%d") $($date "+%H:%M:%S")" +%s)
-    time2=$`expr $time1 + $whitelist_time`
+    time2=`expr $time1 + $whitelist_time`
     echo "$time2" > $config/data/whitelist.conf
   fi
 
   local_time=`cat $config/data/fullpoweroff.conf`
   time_compare $local_time
-  if [[ $? = 1 && $power_c = 1 ]]; then
-    fullpoweroff &
+  if [[ $? = 1 && -n $Status3 ]]; then
+      fullpoweroff &
     time1=$(date -d "$($date "+%Y-%m-%d") $($date "+%H:%M:%S")" +%s)
     time2=`expr $time1 + $power_time`
     echo "$time2" > $config/data/fullpoweroff.conf
@@ -188,7 +198,7 @@ until false; do
 
   local_time=`cat $config/data/killprocess.conf`
   time_compare $local_time
-  if [[ $? = 1 ]]; then
+  if [[ $? = 1 && $doze_deviceidle = 0 ]]; then
     killprocess &
     time1=$(date -d "$($date "+%Y-%m-%d") $($date "+%H:%M:%S")" +%s)
     time2=`expr $time1 + $killprocess_time`
@@ -197,8 +207,8 @@ until false; do
 
   time_end=$(date -d "$($date "+%Y-%m-%d") $($date "+%H:%M:%S")" +%s)
   time_1=`expr $time_end - $time_start`
-  if [[ $time_1 -lt 5 ]]; then
-    time_2=5
+  if [[ $time_1 -lt 10 ]]; then
+    time_2=10
     time_3=`expr $time_2 - $time_1`
     sleep $time_3
   fi
