@@ -2,16 +2,28 @@ SKIPUNZIP=0
 
 config="/sdcard/Android/Optimized"
 
+get_choose() {
+	local choose
+	local branch
+	while :; do
+		choose="$(getevent -qlc 1 | awk '{ print $3 }')"
+		case "$choose" in
+		KEY_VOLUMEUP)  branch="0" ;;
+		KEY_VOLUMEDOWN)  branch="1" ;;
+		*)  continue ;;
+		esac
+		echo "$branch"
+		break
+	done
+}
+
+echo "The installation may take 3-5 seconds."
+
 mkdir $MODPATH/system
 
 [[ -d $config ]] || mkdir $config
 [[ -d $config/data ]] || mkdir $config/data
 [[ -e $config/config.conf ]] || cp -f $MODPATH/common/config/config.conf $config/config.conf
-
-stop tcpdump
-stop cnss_diag
-rm -rf /data/vendor/wlan_logs/*
-setprop sys.miui.ndcd off
 
 mkdir -p $MODPATH/system/priv-app/MiuiPackageInstaller
 cp -f $MODPATH/common/install/MiuiPackageInstaller.apk $MODPATH/system/priv-app/MiuiPackageInstaller/
@@ -34,7 +46,14 @@ set_perm_recursive  $MODPATH/system/media/theme/default/com.miui.cloudservice  0
 set_perm_recursive  $MODPATH/system/media/theme/default/framework-res  0  0  0644 u:object_r:system_file:s0
 
 source $MODPATH/common/install/Ram_Optimized.sh
-source $MODPATH/common/install/RemoveThermal.sh
+
+echo "--- Is RemoveThermal installed?"
+echo "-- Volume key+: Install"
+echo "-- Volume key-: Skip"
+echo "--- Now, you have to make a choice."
+if [[ $(get_choose) == 0 ]]; then
+  source $MODPATH/common/install/RemoveThermal.sh
+fi
 
 UselessProcess_list="system/bin/logd
 system/etc/init/logd.rc

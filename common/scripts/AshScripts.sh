@@ -83,7 +83,7 @@ fullpoweroff() {
           if [[ -n $L ]]; then
             L=$L
           elif [[ -z $L ]]; then
-            unset Status3
+            Status3=2
             [[ -n $Power_Stop_Delay ]] && sleep $Power_Stop_Delay
             [[ -f $Charging_control ]] && echo 1 >$Charging_control
             [[ -f $Charging_control2 ]] && echo 0 >$Charging_control2
@@ -189,7 +189,7 @@ until false; do
 
   local_time=`cat $config/data/fullpoweroff.conf`
   time_compare $local_time
-  if [[ $? = 1 && -n $Status3 ]]; then
+  if [[ $? = 1 && $Status3 = 1 ]]; then
       fullpoweroff &
     time1=$(date -d "$($date "+%Y-%m-%d") $($date "+%H:%M:%S")" +%s)
     time2=`expr $time1 + $power_time`
