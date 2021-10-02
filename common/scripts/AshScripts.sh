@@ -80,26 +80,28 @@ fullpoweroff() {
   [[ -f $Charging_control2 ]] && Status2=`cat $Charging_control2`
   if [[ $(cat $level) -ge $Power_Stop ]]; then
       if [[ $Status -eq 0 || $Status2 -eq 1 ]]; then
-          if [[ $L = 1 ]]; then
-            L=$L
-          elif [[ $L = 0 ]]; then
+          if [[ -n $Set_a ]]; then
+            Set_a=1
+          elif [[ -z $Set_a ]]; then
+            log "当前电量为$Power,$Power_Stop_Delay后自动断电"
+            Set_c=1
             [[ -n $Power_Stop_Delay ]] && sleep $Power_Stop_Delay
             [[ -f $Charging_control ]] && echo 1 >$Charging_control
             [[ -f $Charging_control2 ]] && echo 0 >$Charging_control2
-            L=1
-            H=0
+            Set_a=1
+            unset Set_b Set_c
             log "当前电量为$Power,已停止充电"
           fi
       fi
   elif [[ $(cat $level) -le $Power_Restore ]]; then
       if [[ $Status -eq 1 || $Status2 -eq 0 ]]; then
-          if [[ $H = 1 ]]; then
-              H=$H
-          elif [[ $L = 0 ]]; then
+          if [[ -n $Set_b ]]; then
+              Set_b=1
+          elif [[ -z $Set_b ]]; then
               [[ -f $Charging_control ]] && echo 0 >$Charging_control
               [[ -f $Charging_control2 ]] && echo 1 >$Charging_control2
-              H=1
-              L=0
+              Set_b=1
+              unset Set_a
               log "当前电量为$Power,已重新启用充电"
           fi
       fi
@@ -141,13 +143,12 @@ check_log
 
 doze_deviceidle=0
 
-Charging_control=/sys/class/power_supply/battery/input_suspend
-Charging_control2=/sys/class/power_supply/battery/charging_enabled
-level=/sys/class/power_supply/battery/capacity
+Charging_control="/sys/class/power_supply/battery/input_suspend"
+Charging_control2="/sys/class/power_supply/battery/charging_enabled"
+level="/sys/class/power_supply/battery/capacity"
 Status=0
 Status2=1
-L=0
-H=0
+unset Set_a Set_b Set_c
 
 killprocess_pose="
 com.tencent.mm:sandbox*
@@ -187,7 +188,7 @@ until false; do
 
   local_time=`cat $config/data/fullpoweroff.conf`
   time_compare $local_time
-  if [[ $? = 1 && $Status3 = 1 ]]; then
+  if [[ $? = 1 && -z $Set_c ]]; then
       fullpoweroff &
     time1=$(date -d "$($date "+%Y-%m-%d") $($date "+%H:%M:%S")" +%s)
     time2=`expr $time1 + $power_time`
