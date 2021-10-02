@@ -80,28 +80,26 @@ fullpoweroff() {
   [[ -f $Charging_control2 ]] && Status2=`cat $Charging_control2`
   if [[ $(cat $level) -ge $Power_Stop ]]; then
       if [[ $Status -eq 0 || $Status2 -eq 1 ]]; then
-          if [[ -n $L ]]; then
+          if [[ $L = 1 ]]; then
             L=$L
-          elif [[ -z $L ]]; then
-            Status3=2
+          elif [[ $L = 0 ]]; then
             [[ -n $Power_Stop_Delay ]] && sleep $Power_Stop_Delay
             [[ -f $Charging_control ]] && echo 1 >$Charging_control
             [[ -f $Charging_control2 ]] && echo 0 >$Charging_control2
             L=1
-            Status3=1
-            unset H
+            H=0
             log "当前电量为$Power,已停止充电"
           fi
       fi
   elif [[ $(cat $level) -le $Power_Restore ]]; then
       if [[ $Status -eq 1 || $Status2 -eq 0 ]]; then
-          if [[ -n $H ]]; then
+          if [[ $H = 1 ]]; then
               H=$H
-          elif [[ -z $H ]]; then
+          elif [[ $L = 0 ]]; then
               [[ -f $Charging_control ]] && echo 0 >$Charging_control
               [[ -f $Charging_control2 ]] && echo 1 >$Charging_control2
               H=1
-              unset L
+              L=0
               log "当前电量为$Power,已重新启用充电"
           fi
       fi
@@ -114,7 +112,7 @@ function topapp(){
 }
 
 function killapp(){
-for i in $pose;do
+for i in $killprocess_pose;do
 		pgrep -f "$i" | while read PID;do
 		test "$(topapp)" = "com.tencent.mm" && break
 		test "$(topapp)" = "com.tencent.mobileqq" && break
@@ -148,8 +146,8 @@ Charging_control2=/sys/class/power_supply/battery/charging_enabled
 level=/sys/class/power_supply/battery/capacity
 Status=0
 Status2=1
-unset L H
-Status3=1
+L=0
+H=0
 
 killprocess_pose="
 com.tencent.mm:sandbox*

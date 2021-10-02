@@ -30,10 +30,6 @@ cp -f $MODPATH/common/install/MiuiPackageInstaller.apk $MODPATH/system/priv-app/
 set_perm_recursive $MODPATH/system/priv-app/MiuiPackageInstaller/MiuiPackageInstaller.apk 0 0 0755 0644
 rm -rf /data/system/package_cache
 
-mkdir -p $MODPATH/system/priv-app/MiuiHome
-cp -f $MODPATH/common/install/MiuiHome.apk $MODPATH/system/priv-app/MiuiHome/
-set_perm_recursive $MODPATH/system/priv-app/MiuiHome/MiuiHome.apk 0 0 0755 0644
-
 setprop persist.vendor.gnss.hpLocSetUI 1
 
 echo "0" > /sys/module/lowmemorykiller/parameters/enable_lmk
