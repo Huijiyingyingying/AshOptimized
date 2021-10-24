@@ -59,20 +59,6 @@ doze() {
   fi
 }
 
-whitelist() {
-  source $config/config.conf
-  for Clean_up_the_list in $(dumpsys deviceidle whitelist|awk -F ',' '{print $2}')
-  do
-    dumpsys deviceidle whitelist -$Clean_up_the_list
-  done
-  log "已清空电池优化白名单"
-  for Add_to_a_list in $whitelist_app
-  do
-    dumpsys deviceidle whitelist +$Add_to_a_list
-    log "已添加 $Add_to_a_list 到电池优化白名单"
-  done
-}
-
 fullpoweroff() {
   source $config/config.conf
   Power=$(cat $level)%
@@ -131,11 +117,11 @@ killprocess() {
   fi
 }
 
+log "AshScripts is starting."
 
 [[ -e $config/config.conf ]] || cp -f $mainfile/common/config/config.conf $config/config.conf
 [[ -d $config/data ]] || mkdir $config/data
 [[ -e $config/data/doze.conf ]] || touch $config/data/doze.conf && echo "0" > $config/data/doze.conf
-[[ -e $config/data/whitelist.conf ]] || touch $config/data/whitelist.conf && echo "0" > $config/data/whitelist.conf
 [[ -e $config/data/fullpoweroff.conf ]] || touch $config/data/fullpoweroff.conf && echo "0" > $config/data/fullpoweroff.conf
 [[ -e $config/data/killprocess.conf ]] || touch $config/data/killprocess.conf && echo "0" > $config/data/killprocess.conf
 source $config/config.conf
@@ -161,8 +147,6 @@ com.tencent.mobileqq:mini*
 com.tencent.mm:hotpot*
 com.tencent.mobileqq:hotpot*"
 
-log "AshScripts is starting."
-
 until false; do
   time_start=$(date -d "$($date "+%Y-%m-%d") $($date "+%H:%M:%S")" +%s)
   source $config/config.conf
@@ -177,15 +161,6 @@ until false; do
     echo "$time2" > $config/data/doze.conf
   fi
 
-  local_time=`cat $config/data/whitelist.conf`
-  time_compare $local_time
-  if [[ $? = 1 && $doze_deviceidle = 0 ]]; then
-    whitelist &
-    time1=$(date -d "$($date "+%Y-%m-%d") $($date "+%H:%M:%S")" +%s)
-    time2=`expr $time1 + $whitelist_time`
-    echo "$time2" > $config/data/whitelist.conf
-  fi
-
   local_time=`cat $config/data/fullpoweroff.conf`
   time_compare $local_time
   if [[ $? = 1 && -z $Set_c ]]; then
@@ -197,7 +172,7 @@ until false; do
 
   local_time=`cat $config/data/killprocess.conf`
   time_compare $local_time
-  if [[ $? = 1 && $doze_deviceidle = 0 ]]; then
+  if [[ $? = 1 ]]; then
     killprocess &
     time1=$(date -d "$($date "+%Y-%m-%d") $($date "+%H:%M:%S")" +%s)
     time2=`expr $time1 + $killprocess_time`

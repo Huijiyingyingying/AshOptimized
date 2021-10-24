@@ -1,8 +1,24 @@
 MODDIR=${0%/*}
+sleep 60
 
-chown root:root $MODDIR/common/scripts/AshScripts.sh
-chmod 777 $MODDIR/common/scripts/AshScripts.sh
-nohup $MODDIR/common/scripts/AshScripts.sh &
+config="/sdcard/Android/Optimized"
+date="/system/bin/date"
+log() {
+  time=$($date "+%H:%M:%S")
+  data=$($date "+%Y-%m-%d")
+  txt=".txt"
+  if [ ! -d $config/log ]; then
+  	mkdir -p $config/log
+  fi
+  if [ ! -f $config/log/$data$txt ]; then
+    touch $config/log/$data$txt
+  fi
+	echo "$time $1" >> $config/log/$data$txt
+  number=0
+  for i in $config/log/*; do
+    number=`expr $number + 1`
+  done
+}
 
 stop tcpdump
 stop cnss_diag
@@ -181,3 +197,23 @@ chown -R root:root /data/user/0/com.xiaomi.market/app_analytics/
 chmod -R 000 /data/user/0/com.xiaomi.market/app_analytics/
 # 卸载用户0 com.miui.analytics应用
 pm uninstall --user 0 com.miui.analytics >/dev/null
+
+chown root:root $MODDIR/common/scripts/AshScripts.sh
+chmod 777 $MODDIR/common/scripts/AshScripts.sh
+nohup $MODDIR/common/scripts/AshScripts.sh &
+
+sh $MODDIR/common/scripts/PowerWhite.sh &
+
+MAGISK_TMP=$(magisk --path 2>/dev/null)
+[[ -z $MAGISK_TMP ]] && MAGISK_TMP="/sbin"
+alias crond="$MAGISK_TMP/.magisk/busybox/crond"
+chmod -R 0777 $MODDIR
+echo "SHELL=$MODDIR/bin/bash" > $MODDIR/cron.d/root
+echo "0 * * * * $MODDIR/bin/bash \"$MODDIR/common/scripts/PowerWhite.sh\"" >> $MODDIR/cron.d/root
+crond -c $MODDIR/cron.d
+
+if [[ $(pgrep -f "AshOptimized/cron.d" | grep -v grep | wc -l) -ge 1 ]]; then
+  log "PowerWhite CrondScript is starting."
+else
+  log "PowerWhite CrondScript isn't starting."
+fi
