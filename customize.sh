@@ -43,12 +43,20 @@ set_perm_recursive  $MODPATH/system/media/theme/default/framework-res  0  0  064
 
 source $MODPATH/common/install/Ram_Optimized.sh
 
-echo "--- Is RemoveThermal installed?"
-echo "-- Volume key+: Install"
-echo "-- Volume key-: Skip"
-echo "--- Now, you have to make a choice."
+echo "--- 选择安装 RemoveThermal(移除温控) 功能"
+echo "-- 音量键+: 安装"
+echo "-- 音量键-: 不安装"
+echo "--- 请选择(按 音量键+ 或 音量键-)"
 if [[ $(get_choose) == 0 ]]; then
   source $MODPATH/common/install/RemoveThermal.sh
+fi
+
+echo "--- 选择更新 config.conf 文件"
+echo "-- 音量键+: 更新"
+echo "-- 音量键-: 不更新"
+echo "--- 请选择(按 音量键+ 或 音量键-)"
+if [[ $(get_choose) == 0 ]]; then
+  cp -f $MODPATH/common/config/config.conf $config/
 fi
 
 UselessProcess_list="system/bin/logd

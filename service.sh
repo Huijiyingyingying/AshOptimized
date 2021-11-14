@@ -198,22 +198,31 @@ chmod -R 000 /data/user/0/com.xiaomi.market/app_analytics/
 # 卸载用户0 com.miui.analytics应用
 pm uninstall --user 0 com.miui.analytics >/dev/null
 
+[[ -e $MODDIR/data/battery_optimize ]] || touch $MODDIR/data/battery_optimize
+echo 0 > $MODDIR/data/battery_optimize
+[[ -e $MODDIR/data/charge_optimize ]] || touch $MODDIR/data/charge_optimize
+echo 0 > $MODDIR/data/charge_optimize
+[[ -e $MODDIR/data/process_optimize ]] || touch $MODDIR/data/process_optimize
+echo 0 > $MODDIR/data/process_optimize
+
 chown root:root $MODDIR/common/scripts/AshScripts.sh
 chmod 777 $MODDIR/common/scripts/AshScripts.sh
 nohup $MODDIR/common/scripts/AshScripts.sh &
 
-sh $MODDIR/common/scripts/PowerWhite.sh &
+sh $MODDIR/common/scripts/BatteryOptimize.sh &
+sh $MODDIR/common/scripts/ChargeOptimize.sh &
+sh $MODDIR/common/scripts/ProcessOptimize.sh &
 
 MAGISK_TMP=$(magisk --path 2>/dev/null)
 [[ -z $MAGISK_TMP ]] && MAGISK_TMP="/sbin"
 alias crond="$MAGISK_TMP/.magisk/busybox/crond"
 chmod -R 0777 $MODDIR
 echo "SHELL=$MODDIR/bin/bash" > $MODDIR/cron.d/root
-echo "0 * * * * $MODDIR/bin/bash \"$MODDIR/common/scripts/PowerWhite.sh\"" >> $MODDIR/cron.d/root
+echo "* * * * * $MODDIR/bin/bash \"$MODDIR/common/scripts/Ash.sh\"" >> $MODDIR/cron.d/root
 crond -c $MODDIR/cron.d
 
 if [[ $(pgrep -f "AshOptimized/cron.d" | grep -v grep | wc -l) -ge 1 ]]; then
-  log "PowerWhite CrondScript is starting."
+  log "Ash CrondScript is starting."
 else
-  log "PowerWhite CrondScript isn't starting."
+  log "Ash CrondScript isn't starting."
 fi
