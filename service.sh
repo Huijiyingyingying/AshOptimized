@@ -3,22 +3,8 @@ sleep 60
 
 config="/sdcard/Android/Optimized"
 date="/system/bin/date"
-log() {
-  time=$($date "+%H:%M:%S")
-  data=$($date "+%Y-%m-%d")
-  txt=".txt"
-  if [ ! -d $config/log ]; then
-  	mkdir -p $config/log
-  fi
-  if [ ! -f $config/log/$data$txt ]; then
-    touch $config/log/$data$txt
-  fi
-	echo "$time $1" >> $config/log/$data$txt
-  number=0
-  for i in $config/log/*; do
-    number=`expr $number + 1`
-  done
-}
+
+source $MODDIR/bin/log.sh
 
 stop tcpdump
 stop cnss_diag
@@ -26,33 +12,36 @@ rm -rf /data/vendor/charge_logger/
 rm -rf /data/vendor/wlan_logs/
 setprop sys.miui.ndcd off
 
-userdata=$(getprop dev.mnt.blk.data)
-echo "0" > /sys/block/sda/queue/iostats
-echo "0" > /sys/block/sdb/queue/iostats
-echo "0" > /sys/block/sdc/queue/iostats
-echo "0" > /sys/block/sdd/queue/iostats
-echo "0" > /sys/block/sde/queue/iostats
-echo "0" > /sys/block/sdf/queue/iostats
-echo "0" > /sys/module/binder/parameters/debug_mask
-echo "0" > /sys/module/binder_alloc/parameters/debug_mask
-echo "0" > /sys/module/msm_show_resume_irq/parameters/debug_mask
-echo "N" > /sys/kernel/debug/debug_enabled
-echo "128" > /sys/block/sda/queue/read_ahead_kb
-echo "36" > /sys/block/sda/queue/nr_requests
-echo "128" > /sys/block/sde/queue/read_ahead_kb
-echo "36" > /sys/block/sde/queue/nr_requests
-echo "128" > /sys/block/${userdata}/queue/read_ahead_kb
-echo "36" > /sys/block/${userdata}/queue/nr_requests
-echo "128" > /sys/block/zram0/queue/read_ahead_kb
-echo "36" > /sys/block/zram0/queue/nr_requests
-echo "0" > /proc/sys/vm/page-cluster
-echo "0" > /sys/module/subsystem_restart/parameters/enable_ramdumps
-echo "off" > /proc/sys/kernel/printk_devkmsg
-echo "3000" > /proc/sys/vm/dirty_expire_centisecs
-echo "0" > /sys/fs/f2fs/${userdata}/iostat_enable
-echo "0" > /proc/sys/kernel/sched_schedstats
-echo "20" > /proc/sys/vm/stat_interval
-echo "0" > /proc/sys/kernel/sched_autogroup_enabled
+Device="$(getprop ro.product.device)"
+if [[ $Device = "cas" ]]; then
+  userdata=$(getprop dev.mnt.blk.data)
+  echo "0" > /sys/block/sda/queue/iostats
+  echo "0" > /sys/block/sdb/queue/iostats
+  echo "0" > /sys/block/sdc/queue/iostats
+  echo "0" > /sys/block/sdd/queue/iostats
+  echo "0" > /sys/block/sde/queue/iostats
+  echo "0" > /sys/block/sdf/queue/iostats
+  echo "0" > /sys/module/binder/parameters/debug_mask
+  echo "0" > /sys/module/binder_alloc/parameters/debug_mask
+  echo "0" > /sys/module/msm_show_resume_irq/parameters/debug_mask
+  echo "N" > /sys/kernel/debug/debug_enabled
+  echo "128" > /sys/block/sda/queue/read_ahead_kb
+  echo "36" > /sys/block/sda/queue/nr_requests
+  echo "128" > /sys/block/sde/queue/read_ahead_kb
+  echo "36" > /sys/block/sde/queue/nr_requests
+  echo "128" > /sys/block/${userdata}/queue/read_ahead_kb
+  echo "36" > /sys/block/${userdata}/queue/nr_requests
+  echo "128" > /sys/block/zram0/queue/read_ahead_kb
+  echo "36" > /sys/block/zram0/queue/nr_requests
+  echo "0" > /proc/sys/vm/page-cluster
+  echo "0" > /sys/module/subsystem_restart/parameters/enable_ramdumps
+  echo "off" > /proc/sys/kernel/printk_devkmsg
+  echo "3000" > /proc/sys/vm/dirty_expire_centisecs
+  echo "0" > /sys/fs/f2fs/${userdata}/iostat_enable
+  echo "0" > /proc/sys/kernel/sched_schedstats
+  echo "20" > /proc/sys/vm/stat_interval
+  echo "0" > /proc/sys/kernel/sched_autogroup_enabled
+fi
 
 white_list() {
   if [ $1 = 0 ]; then
@@ -205,13 +194,34 @@ echo 0 > $MODDIR/data/charge_optimize
 [[ -e $MODDIR/data/process_optimize ]] || touch $MODDIR/data/process_optimize
 echo 0 > $MODDIR/data/process_optimize
 
-chown root:root $MODDIR/common/scripts/AshScripts.sh
-chmod 777 $MODDIR/common/scripts/AshScripts.sh
-nohup $MODDIR/common/scripts/AshScripts.sh &
+source $config/config.conf
+if [[ $doze_enable = "true" ]]; then
+  chown root:root $MODDIR/common/scripts/AshScripts.sh
+  chmod 777 $MODDIR/common/scripts/AshScripts.sh
+  nohup $MODDIR/common/scripts/AshScripts.sh &
+  log "Doze(深度息屏): 已开启"
+else
+  log "Doze(深度息屏): 未开启"
+fi
 
-sh $MODDIR/common/scripts/BatteryOptimize.sh &
-sh $MODDIR/common/scripts/ChargeOptimize.sh &
-sh $MODDIR/common/scripts/ProcessOptimize.sh &
+if [[ $battery_enable = "true" ]]; then
+  sh $MODDIR/common/scripts/BatteryOptimize.sh &
+  log "BatteryOptimize(电池优化): 已开启"
+else
+  log "BatteryOptimize(电池优化): 未开启"
+fi
+if [[ $charge_enable = "true" ]]; then
+  sh $MODDIR/common/scripts/ChargeOptimize.sh &
+  log "ChargeOptimize(充电优化): 已开启"
+else
+  log "ChargeOptimize(充电优化): 未开启"
+fi
+if [[ $process_enable = "true" ]]; then
+  sh $MODDIR/common/scripts/ProcessOptimize.sh &
+  log "ProcessOptimize(自动优化QQ微信内存): 已开启"
+else
+  log "ProcessOptimize(自动优化QQ微信内存): 未开启"
+fi
 
 MAGISK_TMP=$(magisk --path 2>/dev/null)
 [[ -z $MAGISK_TMP ]] && MAGISK_TMP="/sbin"
@@ -222,7 +232,7 @@ echo "* * * * * $MODDIR/bin/bash \"$MODDIR/common/scripts/Ash.sh\"" >> $MODDIR/c
 crond -c $MODDIR/cron.d
 
 if [[ $(pgrep -f "AshOptimized/cron.d" | grep -v grep | wc -l) -ge 1 ]]; then
-  log "Ash CrondScript is starting."
+  log "AshCrondScript is starting."
 else
-  log "Ash CrondScript isn't starting."
+  log "AshCrondScript isn't starting."
 fi

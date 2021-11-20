@@ -17,13 +17,15 @@ get_choose() {
 	done
 }
 
+Device="$(getprop ro.product.device)"
+echo "Device: $Device"
 echo "The installation may take 3-5 seconds."
 
 mkdir $MODPATH/system
 
+config_a="0"
 [[ -d $config ]] || mkdir $config
-[[ -d $config/data ]] || mkdir $config/data
-[[ -e $config/config.conf ]] || cp -f $MODPATH/common/config/config.conf $config/config.conf
+[[ -e $config/config.conf ]] || cp -f $MODPATH/common/config/config.conf $config/config.conf || config_a="1"
 
 mkdir -p $MODPATH/system/priv-app/MiuiPackageInstaller
 cp -f $MODPATH/common/install/MiuiPackageInstaller.apk $MODPATH/system/priv-app/MiuiPackageInstaller/
@@ -47,16 +49,22 @@ echo "--- 选择安装 RemoveThermal(移除温控) 功能"
 echo "-- 音量键+: 安装"
 echo "-- 音量键-: 不安装"
 echo "--- 请选择(按 音量键+ 或 音量键-)"
+echo " "
 if [[ $(get_choose) == 0 ]]; then
   source $MODPATH/common/install/RemoveThermal.sh
 fi
 
-echo "--- 选择更新 config.conf 文件"
-echo "-- 音量键+: 更新"
-echo "-- 音量键-: 不更新"
-echo "--- 请选择(按 音量键+ 或 音量键-)"
-if [[ $(get_choose) == 0 ]]; then
-  cp -f $MODPATH/common/config/config.conf $config/
+sleep 0.5
+
+if [[ $config_a = "1" ]]; then
+	echo "--- 选择更新 config.conf 文件"
+	echo "-- 音量键+: 更新"
+	echo "-- 音量键-: 不更新"
+	echo "--- 请选择(按 音量键+ 或 音量键-)"
+	echo " "
+	if [[ $(get_choose) == 0 ]]; then
+	  cp -f $MODPATH/common/config/config.conf $config/
+	fi
 fi
 
 UselessProcess_list="system/bin/logd
@@ -153,3 +161,4 @@ REPLACE="
 rm -rf $MODPATH/common/install
 
 echo "Installation is complete."
+echo "by 灰机嘤嘤嘤"
