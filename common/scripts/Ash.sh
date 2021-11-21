@@ -29,8 +29,9 @@ ChargeOptimize() {
   State=`expr $State_charge_optimize + 1`
   if [[ $State -ge $charge_optimize_time ]]; then
     echo 0 > $mainfile/data/charge_optimize
+    charge_optimize_process=$(cat "$mainfile/data/charge_optimize_process")
     ps -fe|grep ChargeOptimize |grep -v grep
-    if [ $? -ne 0 ]; then
+    if [ $? -ne 0 && $charge_optimize_process = "0" ]; then
       sh $mainfile/common/scripts/ChargeOptimize.sh &
     fi
   else

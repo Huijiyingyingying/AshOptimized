@@ -12,6 +12,8 @@ Status=0
 Status2=1
 unset Set_a Set_b Set_c
 
+echo 1 > $mainfile/data/charge_optimize_process
+
 source $config/config.conf
 Power=$(cat $level)%
 [[ -f $Charging_control ]] && Status=`cat $Charging_control`
@@ -44,5 +46,7 @@ elif [[ $(cat $level) -le $charge_optimize_restore ]]; then
         fi
     fi
 fi
+
+echo 0 > $mainfile/data/charge_optimize_process
 
 exit 0
