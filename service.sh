@@ -192,6 +192,8 @@ echo 0 > $MODDIR/data/battery_optimize
 echo 0 > $MODDIR/data/charge_optimize
 [[ -e $MODDIR/data/process_optimize ]] || touch $MODDIR/data/process_optimize
 echo 0 > $MODDIR/data/process_optimize
+[[ -e $MODDIR/data/charge_optimize_process ]] || touch $MODDIR/data/charge_optimize_process
+echo 0 > $MODDIR/data/charge_optimize_process
 
 source $config/config.conf
 if [[ $doze_enable = "true" ]]; then
