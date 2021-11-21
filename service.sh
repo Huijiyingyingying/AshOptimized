@@ -3,46 +3,44 @@ sleep 60
 
 config="/sdcard/Android/Optimized"
 date="/system/bin/date"
-
 source $MODDIR/bin/log.sh
 
+#水龙优化
 stop tcpdump
 stop cnss_diag
 rm -rf /data/vendor/charge_logger/
 rm -rf /data/vendor/wlan_logs/
 setprop sys.miui.ndcd off
 
-Device="$(getprop ro.product.device)"
-if [[ $Device = "cas" ]]; then
-  userdata=$(getprop dev.mnt.blk.data)
-  echo "0" > /sys/block/sda/queue/iostats
-  echo "0" > /sys/block/sdb/queue/iostats
-  echo "0" > /sys/block/sdc/queue/iostats
-  echo "0" > /sys/block/sdd/queue/iostats
-  echo "0" > /sys/block/sde/queue/iostats
-  echo "0" > /sys/block/sdf/queue/iostats
-  echo "0" > /sys/module/binder/parameters/debug_mask
-  echo "0" > /sys/module/binder_alloc/parameters/debug_mask
-  echo "0" > /sys/module/msm_show_resume_irq/parameters/debug_mask
-  echo "N" > /sys/kernel/debug/debug_enabled
-  echo "128" > /sys/block/sda/queue/read_ahead_kb
-  echo "36" > /sys/block/sda/queue/nr_requests
-  echo "128" > /sys/block/sde/queue/read_ahead_kb
-  echo "36" > /sys/block/sde/queue/nr_requests
-  echo "128" > /sys/block/${userdata}/queue/read_ahead_kb
-  echo "36" > /sys/block/${userdata}/queue/nr_requests
-  echo "128" > /sys/block/zram0/queue/read_ahead_kb
-  echo "36" > /sys/block/zram0/queue/nr_requests
-  echo "0" > /proc/sys/vm/page-cluster
-  echo "0" > /sys/module/subsystem_restart/parameters/enable_ramdumps
-  echo "off" > /proc/sys/kernel/printk_devkmsg
-  echo "3000" > /proc/sys/vm/dirty_expire_centisecs
-  echo "0" > /sys/fs/f2fs/${userdata}/iostat_enable
-  echo "0" > /proc/sys/kernel/sched_schedstats
-  echo "20" > /proc/sys/vm/stat_interval
-  echo "0" > /proc/sys/kernel/sched_autogroup_enabled
-fi
+userdata=$(getprop dev.mnt.blk.data)
+echo "0" > /sys/block/sda/queue/iostats
+echo "0" > /sys/block/sdb/queue/iostats
+echo "0" > /sys/block/sdc/queue/iostats
+echo "0" > /sys/block/sdd/queue/iostats
+echo "0" > /sys/block/sde/queue/iostats
+echo "0" > /sys/block/sdf/queue/iostats
+echo "0" > /sys/module/binder/parameters/debug_mask
+echo "0" > /sys/module/binder_alloc/parameters/debug_mask
+echo "0" > /sys/module/msm_show_resume_irq/parameters/debug_mask
+echo "N" > /sys/kernel/debug/debug_enabled
+echo "128" > /sys/block/sda/queue/read_ahead_kb
+echo "36" > /sys/block/sda/queue/nr_requests
+echo "128" > /sys/block/sde/queue/read_ahead_kb
+echo "36" > /sys/block/sde/queue/nr_requests
+echo "128" > /sys/block/${userdata}/queue/read_ahead_kb
+echo "36" > /sys/block/${userdata}/queue/nr_requests
+echo "128" > /sys/block/zram0/queue/read_ahead_kb
+echo "36" > /sys/block/zram0/queue/nr_requests
+echo "0" > /proc/sys/vm/page-cluster
+echo "0" > /sys/module/subsystem_restart/parameters/enable_ramdumps
+echo "off" > /proc/sys/kernel/printk_devkmsg
+echo "3000" > /proc/sys/vm/dirty_expire_centisecs
+echo "0" > /sys/fs/f2fs/${userdata}/iostat_enable
+echo "0" > /proc/sys/kernel/sched_schedstats
+echo "20" > /proc/sys/vm/stat_interval
+echo "0" > /proc/sys/kernel/sched_autogroup_enabled
 
+#进程优先度优化
 white_list() {
   if [ $1 = 0 ]; then
     pgrep -o $3 | while read pid; do
@@ -84,6 +82,7 @@ echo "20" > /dev/stune/top-app/schedtune.boost
 echo "1" > /dev/stune/schedtune.prefer_idle
 echo "1" > /dev/stune/top-app/schedtune.prefer_idle
 
+#TCP优化
 echo "
 net.ipv4.conf.all.route_localnet=1
 net.ipv4.ip_forward = 1
@@ -230,6 +229,9 @@ chmod -R 0777 $MODDIR
 echo "SHELL=$MODDIR/bin/bash" > $MODDIR/cron.d/root
 echo "* * * * * $MODDIR/bin/bash \"$MODDIR/common/scripts/Ash.sh\"" >> $MODDIR/cron.d/root
 crond -c $MODDIR/cron.d
+
+# 禁用MSA
+pm disable com.miui.systemAdSolution >/dev/null
 
 if [[ $(pgrep -f "AshOptimized/cron.d" | grep -v grep | wc -l) -ge 1 ]]; then
   log "AshCrondScript is starting."

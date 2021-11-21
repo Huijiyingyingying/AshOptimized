@@ -56,7 +56,7 @@ fi
 
 sleep 0.5
 
-if [[ $config_a = "1" ]]; then
+if [[ $config_a = "0" ]]; then
 	echo "--- 选择更新 config.conf 文件"
 	echo "-- 音量键+: 更新"
 	echo "-- 音量键-: 不更新"
